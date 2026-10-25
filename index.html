@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Goop Goop Goop</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=Nunito:wght@700;900&display=swap">
+<style>
+[hidden]{display:none!important}
+/* Layout: one centered stage; picture with a bubble above it. Single dark look by choice. */
+:root{
+  --bg:#17141d; --panel:#241f2c; --ink:#f6eedd; --dim:#a69bb3; --accent:#ffb347; --line:#3b3346;
+  --display:"Bungee",Impact,system-ui,sans-serif;
+  --body:"Nunito",system-ui,-apple-system,sans-serif;
+  color-scheme:dark;
+}
+html,body{height:100%}
+body{background:var(--bg);position:relative;color:var(--ink);font-family:var(--body);margin:0;box-sizing:border-box;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:24px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}
+.stage{position:relative;display:flex;flex-direction:column;align-items:center;gap:14px;width:100%;max-width:420px}
+.bubble{position:relative;background:var(--ink);color:#2a1a10;font-weight:900;font-size:clamp(18px,5vw,24px);
+  padding:14px 20px;border-radius:20px;text-align:center;box-shadow:0 6px 0 rgba(0,0,0,.35);
+  transform:scale(0);transform-origin:50% 100%;transition:transform .22s cubic-bezier(.3,1.6,.5,1);min-height:1em}
+.bubble.show{transform:scale(1)}
+.bubble::after{content:"";position:absolute;left:50%;bottom:-14px;margin-left:-12px;border:12px solid transparent;border-top-color:var(--ink);border-bottom:0}
+.buddy{border:0;padding:0;background:none;cursor:pointer;border-radius:16px;max-width:100%;display:block}
+.buddy:focus-visible{outline:3px solid var(--accent);outline-offset:4px}
+.buddy canvas,.buddy img{display:block;max-width:100%;max-height:60vh;border-radius:16px}
+.buddy.boing{animation:boing .45s}
+@keyframes boing{0%{transform:scale(1)}30%{transform:scale(1.08,.92)}60%{transform:scale(.95,1.06)}100%{transform:scale(1)}}
+.drop{width:100%;border:2px dashed var(--line);border-radius:16px;padding:40px 20px;text-align:center;background:var(--panel);
+  display:flex;flex-direction:column;gap:10px;align-items:center;box-sizing:border-box}
+.drop.over{border-color:var(--accent)}
+.drop h1{font-family:var(--display);color:var(--accent);margin:0;font-size:22px}
+.drop p{margin:0;color:var(--dim);max-width:32ch}
+label.pick{font-family:var(--display);background:var(--accent);color:#2a1a10;padding:12px 18px;border-radius:12px;cursor:pointer}
+label.pick:focus-within{outline:3px solid var(--ink);outline-offset:3px}
+input[type=file]{position:absolute;opacity:0;width:1px;height:1px}
+.swap{background:none;border:0;color:var(--dim);font-family:var(--body);font-weight:700;text-decoration:underline;cursor:pointer;font-size:13px}
+#map{position:fixed;inset:0;width:100%;height:100%;z-index:-1;display:block}
+.stage{z-index:1}
+.buddy canvas,.buddy img{box-shadow:0 0 0 4px var(--accent),0 14px 40px rgba(0,0,0,.6)}
+.hint{color:var(--ink);font-weight:700;font-size:13px;background:rgba(0,0,0,.55);padding:4px 10px;border-radius:999px;margin:0}
+@media (prefers-reduced-motion:reduce){.bubble{transition:none}.buddy.boing{animation:none}}
+</style>
+</head>
+<body>
+
+<canvas id="map" aria-hidden="true"></canvas>
+<div class="stage">
+  <div class="bubble" id="bubble" aria-live="polite"></div>
+
+  <button class="buddy" id="buddy" hidden aria-label="Click him">
+    <canvas id="still"></canvas>
+    <img id="live" alt="" hidden>
+  </button>
+
+
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const lines=[
+ "My favourite game is Civ 6.",
+ "Civ 6. Right now. Go.",
+ "One more turn of Civ 6, yeah?",
+ "Have you played Civ 6 today?",
+ "Civ 6 is calling your name.",
+ "Civ 6 is so goopy.",
+ "Civ 6 is the goopiest game ever made.",
+ "I'm goopin' for some Civ 6.",
+ "Civ 6 makes me go all goopy inside.",
+ "Pure Civ 6 goop. Mmm.",
+ "Goop up. Load Civ 6.",
+ "Every turn of Civ 6 is extra goopy.",
+ "Civ 6 is peak goop.",
+ "Goopier than a melted peanut. That's Civ 6.",
+ "Civ 6 is the best game in the world.",
+ "Science victory? Goopy. Domination? Goopy.",
+ "Build a wonder. Get goopy.",
+ "I dream about Civ 6 every night.",
+ "Why aren't you playing Civ 6 right now?",
+ "Civ 6 forever. Goop forever."
+];
+let bag=[];
+function nextLine(){if(!bag.length)bag=lines.slice(1).sort(()=>Math.random()-.5);return bag.pop();}
+let src=null,timer=null,n=0;
+
+function setSrc(url){
+  src=url;
+  const img=new Image();
+  img.onload=()=>{ // freeze on first frame
+    const c=$('still');c.width=img.naturalWidth;c.height=img.naturalHeight;
+    c.getContext('2d').drawImage(img,0,0);
+    $('buddy').hidden=false;
+    const live=$('live');live.src=url;live.hidden=false;c.hidden=true;
+    clearInterval(timer);nag();timer=setInterval(nag,3500);
+  };
+  img.src=url;
+}
+function showStill(){$('still').hidden=false;$('live').hidden=true;$('live').removeAttribute('src');}
+
+let playing=false;
+function nag(){
+  const b=$('bubble');b.classList.remove('show');void b.offsetWidth;
+  b.textContent=n===0?lines[0]:nextLine();n++;
+  b.classList.add('show');
+}
+$('buddy').onclick=()=>{
+  const bd=$('buddy');bd.classList.remove('boing');void bd.offsetWidth;bd.classList.add('boing');
+  clearInterval(timer);nag();timer=setInterval(nag,3500);
+};
+
+// The GIF everyone sees. Upload a file called goop.gif next to this index.html.
+setSrc('goop.gif');
+
+/* hex strategy-map background */
+function drawMap(){
+  const c=$('map'),d=Math.min(devicePixelRatio||1,2);
+  c.width=innerWidth*d;c.height=innerHeight*d;
+  const x=c.getContext('2d');x.scale(d,d);
+  const W=innerWidth,H=innerHeight,r=34,hw=Math.sqrt(3)*r;
+  let seed=7;const rnd=()=>(seed=(seed*16807)%2147483647)/2147483647;
+  const noise=(q,s)=>Math.sin(q*.35+s*.2)+Math.cos(q*.18-s*.41)*.8+Math.sin((q+s)*.27)*.6;
+  const terr=[['#2f5f8f','#3a6d9c'],['#d9c98a','#e3d49b'],['#6aa84f','#79b85d'],['#4f8a3c','#5a9746'],['#8d8a7f','#a3a094'],['#e8ecf0','#f7f9fb']];
+  for(let s=-1;s*r*1.5<H+r;s++)for(let q=-1;q*hw<W+hw;q++){
+    const cx=q*hw+(s&1?hw/2:0),cy=s*r*1.5;
+    const n=noise(q,s)+rnd()*.5;
+    const t=n<-.6?0:n<-.35?1:n<.4?2:n<1?3:n<1.5?4:5;
+    x.beginPath();for(let i=0;i<6;i++){const a=Math.PI/3*i+Math.PI/6;x.lineTo(cx+r*Math.cos(a),cy+r*Math.sin(a));}x.closePath();
+    x.fillStyle=terr[t][(q+s)&1];x.fill();x.strokeStyle='rgba(0,0,0,.18)';x.lineWidth=1;x.stroke();
+    if(t===3&&rnd()<.6){for(let k=0;k<3;k++){const tx=cx-12+k*12,ty=cy+6-(k%2)*8;x.fillStyle='#2e5e26';x.beginPath();x.moveTo(tx,ty-12);x.lineTo(tx-7,ty+4);x.lineTo(tx+7,ty+4);x.fill();}}
+    if(t===4){x.fillStyle='#6b6860';x.beginPath();x.moveTo(cx-14,cy+10);x.lineTo(cx,cy-14);x.lineTo(cx+14,cy+10);x.fill();x.fillStyle='#fff';x.beginPath();x.moveTo(cx-5,cy-5);x.lineTo(cx,cy-14);x.lineTo(cx+5,cy-5);x.fill();}
+    if(t===2&&rnd()<.06){x.fillStyle='#b5523b';x.fillRect(cx-9,cy-4,18,12);x.fillStyle='#7a2f22';x.beginPath();x.moveTo(cx-12,cy-4);x.lineTo(cx,cy-14);x.lineTo(cx+12,cy-4);x.fill();}
+  }
+  const v=x.createRadialGradient(W/2,H/2,Math.min(W,H)*.25,W/2,H/2,Math.max(W,H)*.75);
+  v.addColorStop(0,'rgba(10,8,14,0)');v.addColorStop(1,'rgba(10,8,14,.75)');x.fillStyle=v;x.fillRect(0,0,W,H);
+}
+drawMap();addEventListener('resize',drawMap);
+</script>
+
+<script>
+// Discord Activity handshake (only runs inside Discord)
+(()=>{
+  const q=new URLSearchParams(location.search),frame=q.get('frame_id');
+  if(!frame)return;
+  const src=window.parent.opener||window.parent,origin=document.referrer||'*',plat=q.get('platform');
+  const hs={v:1,encoding:'json',client_id:'1564017288955564213',frame_id:frame};
+  if(plat==='desktop'||parseInt(q.get('mobile_app_version')||'0',10)>=250)hs.sdk_version='2.4.0';
+  try{src.postMessage([0,hs],origin);}catch(e){}
+})();
+</script>
+</body>
+</html>
